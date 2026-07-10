@@ -43,7 +43,7 @@ services:
     environment:
       PORT: 8001
       NODE_ENV: production
-      DATABASE_URL: postgresql://postgres:Ammaayya%40123@db.bahlyzkbzlakwkumnprf.supabase.co:5432/postgres
+      DATABASE_URL: postgresql://postgres.bahlyzkbzlakwkumnprf:Ammaayya%40123@aws-0-ap-southeast-2.pooler.supabase.com:5432/postgres
       KAFKA_BROKERS: kafka:29092
       KAFKA_CLIENT_ID: write-service
       JWT_SECRET: secretkey
@@ -62,7 +62,7 @@ services:
     environment:
       PORT: 8002
       NODE_ENV: production
-      DATABASE_URL: postgresql://postgres:Ammaayya%40123@db.bahlyzkbzlakwkumnprf.supabase.co:5432/postgres
+      DATABASE_URL: postgresql://postgres.bahlyzkbzlakwkumnprf:Ammaayya%40123@aws-0-ap-southeast-2.pooler.supabase.com:5432/postgres
 
       UPSTASH_REDIS_REST_URL: https://enough-monster-136470.upstash.io
       UPSTASH_REDIS_REST_TOKEN: gQAAAAAAAhUWAAIgcDIwNzA3NTZhMTMwNDE0Nzk4ODVjMmY2ZDE4NWFiZWZhMA
