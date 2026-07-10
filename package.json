@@ -1,0 +1,15 @@
+{
+  "name": "leaderboard-system-root",
+  "version": "1.0.0",
+  "description": "Root management for Leaderboard System Backend microservices",
+  "private": true,
+  "scripts": {
+    "install:all": "npm --prefix backend/api-gateway install && npm --prefix backend/write-service install && npm --prefix backend/read-service install && npm --prefix backend/analytics-service install && npm --prefix backend/notification-service install",
+    "dev:gateway": "npm --prefix backend/api-gateway run dev",
+    "dev:write": "npm --prefix backend/write-service run dev",
+    "dev:read": "npm --prefix backend/read-service run dev",
+    "dev:analytics": "npm --prefix backend/analytics-service run dev",
+    "dev:notification": "npm --prefix backend/notification-service run dev",
+    "dev:all": "npx concurrently -n \"gateway,write,read,analytics,notification\" -c \"cyan,green,yellow,magenta,blue\" \"npm run dev:gateway\" \"npm run dev:write\" \"npm run dev:read\" \"npm run dev:analytics\" \"npm run dev:notification\""
+  }
+}

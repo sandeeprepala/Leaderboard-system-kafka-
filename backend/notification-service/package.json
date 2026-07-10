@@ -1,0 +1,18 @@
+{
+  "name": "notification-service",
+  "version": "1.0.0",
+  "description": "Notification Service for Leaderboard System - Consumes score updates and sends mock notifications",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "kafkajs": "^2.2.4"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.4"
+  },
+  "private": true
+}
