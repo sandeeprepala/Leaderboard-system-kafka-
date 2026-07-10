@@ -54,7 +54,7 @@ async function startService() {
           try {
             const rawValue = message.value.toString();
             const event = JSON.parse(rawValue);
-            
+
             await processScoreUpdatedEvent(event);
           } catch (error) {
             console.error('[Analytics Service] Error processing message:', error);
