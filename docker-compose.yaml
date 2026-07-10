@@ -21,10 +21,112 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_MIN_INSYNC_REPLICAS: 1
-      # Randomly generated valid cluster ID for KRaft mode
       CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
     volumes:
       - kafka_data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics.sh --bootstrap-server localhost:9092 --list || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  write-service:
+    build:
+      context: ./backend/write-service
+      dockerfile: Dockerfile
+    container_name: write-service
+    ports:
+      - "8001:8001"
+    environment:
+      - PORT=8001
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://postgres:Ammaayya%40123@db.bahlyzkbzlakwkumnprf.supabase.co:5432/postgres
+      - KAFKA_BROKERS=kafka:29092
+      - KAFKA_CLIENT_ID=write-service
+      - JWT_SECRET=secretkey
+      - JWT_EXPIRES_IN=24h
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+  read-service:
+    build:
+      context: ./backend/read-service
+      dockerfile: Dockerfile
+    container_name: read-service
+    ports:
+      - "8002:8002"
+    environment:
+      - PORT=8002
+      - NODE_ENV=production
+      - UPSTASH_REDIS_REST_URL=https://enough-monster-136470.upstash.io
+      - UPSTASH_REDIS_REST_TOKEN=gQAAAAAAAhUWAAIgcDIwNzA3NTZhMTMwNDE0Nzk4ODVjMmY2ZDE4NWFiZWZhMA
+      - KAFKA_BROKERS=kafka:29092
+      - KAFKA_CLIENT_ID=read-service
+      - DATABASE_URL=postgresql://postgres:Ammaayya%40123@db.bahlyzkbzlakwkumnprf.supabase.co:5432/postgres
+      - REBUILD_API_TOKEN=secretkey
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+  analytics-service:
+    build:
+      context: ./backend/analytics-service
+      dockerfile: Dockerfile
+    container_name: analytics-service
+    ports:
+      - "8003:8003"
+    environment:
+      - PORT=8003
+      - NODE_ENV=production
+      - KAFKA_BROKERS=kafka:29092
+      - KAFKA_CLIENT_ID=analytics-service
+      - UPSTASH_REDIS_REST_URL=https://enough-monster-136470.upstash.io
+      - UPSTASH_REDIS_REST_TOKEN=gQAAAAAAAhUWAAIgcDIwNzA3NTZhMTMwNDE0Nzk4ODVjMmY2ZDE4NWFiZWZhMA
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+  notification-service:
+    build:
+      context: ./backend/notification-service
+      dockerfile: Dockerfile
+    container_name: notification-service
+    environment:
+      - KAFKA_BROKERS=kafka:29092
+      - KAFKA_CLIENT_ID=notification-service
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+  api-gateway:
+    build:
+      context: ./backend/api-gateway
+      dockerfile: Dockerfile
+    container_name: api-gateway
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - NODE_ENV=production
+      - WRITE_SERVICE_URL=http://write-service:8001
+      - READ_SERVICE_URL=http://read-service:8002
+      - ANALYTICS_SERVICE_URL=http://analytics-service:8003
+      - JWT_SECRET=secretkey
+    depends_on:
+      - write-service
+      - read-service
+      - analytics-service
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: frontend-leaderboard
+    ports:
+      - "5173:80"
+    depends_on:
+      - api-gateway
 
 volumes:
   kafka_data:
