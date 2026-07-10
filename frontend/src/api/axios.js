@@ -1,7 +1,18 @@
 import axios from 'axios';
 
+const getBaseURL = () => {
+  // If running in browser environment, resolve server IP/host dynamically
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    if (hostname && hostname !== 'localhost' && hostname !== '127.0.0.1') {
+      return `http://${hostname}:8000`;
+    }
+  }
+  return 'http://localhost:8000';
+};
+
 const api = axios.create({
-  baseURL: 'http://localhost:8000', // Points to API Gateway on port 8000
+  baseURL: getBaseURL(),
   headers: {
     'Content-Type': 'application/json'
   }
