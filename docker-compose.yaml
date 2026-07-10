@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   kafka:
     image: confluentinc/cp-kafka:7.6.0
@@ -9,26 +7,31 @@ services:
     environment:
       KAFKA_HEAP_OPTS: "-Xms128m -Xmx256m"
       KAFKA_NODE_ID: 1
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT'
-      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092'
-      KAFKA_LISTENERS: 'PLAINTEXT://0.0.0.0:29092,CONTROLLER://0.0.0.0:29093,PLAINTEXT_HOST://0.0.0.0:9092'
-      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
-      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
-      KAFKA_LOG_DIRS: '/tmp/kraft-combined-logs'
-      KAFKA_PROCESS_ROLES: 'broker,controller'
-      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka:29093'
+      KAFKA_PROCESS_ROLES: "broker,controller"
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka:29093"
+      KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT"
+
+      KAFKA_LISTENERS: "PLAINTEXT://0.0.0.0:29092,CONTROLLER://0.0.0.0:29093,PLAINTEXT_HOST://0.0.0.0:9092"
+
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092"
+
+      KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
+
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_MIN_INSYNC_REPLICAS: 1
-      CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
+
+      KAFKA_LOG_DIRS: "/tmp/kraft-combined-logs"
+
+      CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qk"
+
     volumes:
       - kafka_data:/var/lib/kafka/data
-    healthcheck:
-      test: ["CMD-SHELL", "kafka-topics.sh --bootstrap-server localhost:9092 --list || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+
+    restart: unless-stopped
 
   write-service:
     build:
@@ -38,16 +41,16 @@ services:
     ports:
       - "8001:8001"
     environment:
-      - PORT=8001
-      - NODE_ENV=production
-      - DATABASE_URL=postgresql://postgres:Ammaayya%40123@db.bahlyzkbzlakwkumnprf.supabase.co:5432/postgres
-      - KAFKA_BROKERS=kafka:29092
-      - KAFKA_CLIENT_ID=write-service
-      - JWT_SECRET=secretkey
-      - JWT_EXPIRES_IN=24h
+      PORT: 8001
+      NODE_ENV: production
+      DATABASE_URL: postgresql://postgres:Ammaayya%40123@db.bahlyzkbzlakwkumnprf.supabase.co:5432/postgres
+      KAFKA_BROKERS: kafka:29092
+      KAFKA_CLIENT_ID: write-service
+      JWT_SECRET: secretkey
+      JWT_EXPIRES_IN: 24h
     depends_on:
-      kafka:
-        condition: service_healthy
+      - kafka
+    restart: unless-stopped
 
   read-service:
     build:
@@ -57,17 +60,20 @@ services:
     ports:
       - "8002:8002"
     environment:
-      - PORT=8002
-      - NODE_ENV=production
-      - UPSTASH_REDIS_REST_URL=https://enough-monster-136470.upstash.io
-      - UPSTASH_REDIS_REST_TOKEN=gQAAAAAAAhUWAAIgcDIwNzA3NTZhMTMwNDE0Nzk4ODVjMmY2ZDE4NWFiZWZhMA
-      - KAFKA_BROKERS=kafka:29092
-      - KAFKA_CLIENT_ID=read-service
-      - DATABASE_URL=postgresql://postgres:Ammaayya%40123@db.bahlyzkbzlakwkumnprf.supabase.co:5432/postgres
-      - REBUILD_API_TOKEN=secretkey
+      PORT: 8002
+      NODE_ENV: production
+      DATABASE_URL: postgresql://postgres:Ammaayya%40123@db.bahlyzkbzlakwkumnprf.supabase.co:5432/postgres
+
+      UPSTASH_REDIS_REST_URL: https://enough-monster-136470.upstash.io
+      UPSTASH_REDIS_REST_TOKEN: gQAAAAAAAhUWAAIgcDIwNzA3NTZhMTMwNDE0Nzk4ODVjMmY2ZDE4NWFiZWZhMA
+
+      KAFKA_BROKERS: kafka:29092
+      KAFKA_CLIENT_ID: read-service
+
+      REBUILD_API_TOKEN: secretkey
     depends_on:
-      kafka:
-        condition: service_healthy
+      - kafka
+    restart: unless-stopped
 
   analytics-service:
     build:
@@ -77,15 +83,17 @@ services:
     ports:
       - "8003:8003"
     environment:
-      - PORT=8003
-      - NODE_ENV=production
-      - KAFKA_BROKERS=kafka:29092
-      - KAFKA_CLIENT_ID=analytics-service
-      - UPSTASH_REDIS_REST_URL=https://enough-monster-136470.upstash.io
-      - UPSTASH_REDIS_REST_TOKEN=gQAAAAAAAhUWAAIgcDIwNzA3NTZhMTMwNDE0Nzk4ODVjMmY2ZDE4NWFiZWZhMA
+      PORT: 8003
+      NODE_ENV: production
+
+      KAFKA_BROKERS: kafka:29092
+      KAFKA_CLIENT_ID: analytics-service
+
+      UPSTASH_REDIS_REST_URL: https://enough-monster-136470.upstash.io
+      UPSTASH_REDIS_REST_TOKEN: gQAAAAAAAhUWAAIgcDIwNzA3NTZhMTMwNDE0Nzk4ODVjMmY2ZDE4NWFiZWZhMA
     depends_on:
-      kafka:
-        condition: service_healthy
+      - kafka
+    restart: unless-stopped
 
   notification-service:
     build:
@@ -93,11 +101,11 @@ services:
       dockerfile: Dockerfile
     container_name: notification-service
     environment:
-      - KAFKA_BROKERS=kafka:29092
-      - KAFKA_CLIENT_ID=notification-service
+      KAFKA_BROKERS: kafka:29092
+      KAFKA_CLIENT_ID: notification-service
     depends_on:
-      kafka:
-        condition: service_healthy
+      - kafka
+    restart: unless-stopped
 
   api-gateway:
     build:
@@ -107,16 +115,19 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - PORT=8000
-      - NODE_ENV=production
-      - WRITE_SERVICE_URL=http://write-service:8001
-      - READ_SERVICE_URL=http://read-service:8002
-      - ANALYTICS_SERVICE_URL=http://analytics-service:8003
-      - JWT_SECRET=secretkey
+      PORT: 8000
+      NODE_ENV: production
+
+      WRITE_SERVICE_URL: http://write-service:8001
+      READ_SERVICE_URL: http://read-service:8002
+      ANALYTICS_SERVICE_URL: http://analytics-service:8003
+
+      JWT_SECRET: secretkey
     depends_on:
       - write-service
       - read-service
       - analytics-service
+    restart: unless-stopped
 
   frontend:
     build:
@@ -127,7 +138,7 @@ services:
       - "5173:80"
     depends_on:
       - api-gateway
+    restart: unless-stopped
 
 volumes:
   kafka_data:
-    driver: local
