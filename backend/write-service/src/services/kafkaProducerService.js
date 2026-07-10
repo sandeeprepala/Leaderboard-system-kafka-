@@ -1,12 +1,16 @@
 const { producer } = require('../config/kafka');
 
 async function connectProducer() {
-  try {
-    await producer.connect();
-    console.log('Kafka Producer connected successfully.');
-  } catch (error) {
-    console.error('Failed to connect Kafka Producer:', error);
-    // Exit process if Kafka is critical, or log and retry. For local dev we log.
+  let connected = false;
+  while (!connected) {
+    try {
+      await producer.connect();
+      console.log('Kafka Producer connected successfully.');
+      connected = true;
+    } catch (error) {
+      console.error('Failed to connect Kafka Producer, retrying in 5 seconds...', error.message);
+      await new Promise(resolve => setTimeout(resolve, 5000));
+    }
   }
 }
 

@@ -22,7 +22,9 @@ export default function Analytics() {
           setAnalytics(res.data);
         }
       } catch (err) {
-        console.error('Error loading analytics:', err);
+        if (err.response?.status !== 404) {
+          console.error('Error loading analytics:', err);
+        }
       } finally {
         setLoading(false);
       }

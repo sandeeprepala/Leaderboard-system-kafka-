@@ -21,7 +21,9 @@ export default function Profile() {
           setAnalytics(res.data);
         }
       } catch (err) {
-        console.error('Error loading profile analytics:', err);
+        if (err.response?.status !== 404) {
+          console.error('Error loading profile analytics:', err);
+        }
       } finally {
         setLoading(false);
       }

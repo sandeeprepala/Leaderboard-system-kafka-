@@ -38,7 +38,9 @@ export function AuthProvider({ children }) {
         });
       }
     } catch (err) {
-      console.error('Failed to sync user stats:', err);
+      if (err.response?.status !== 404) {
+        console.error('Failed to sync user stats:', err);
+      }
     }
   };
 

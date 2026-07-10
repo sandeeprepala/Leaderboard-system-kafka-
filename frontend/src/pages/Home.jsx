@@ -28,7 +28,9 @@ export default function Home() {
           setAttempts(analyticsRes.data.totalPlays || 0);
         }
       } catch (err) {
-        console.error('Error fetching dashboard stats:', err);
+        if (err.response?.status !== 404) {
+          console.error('Error fetching dashboard stats:', err);
+        }
       } finally {
         setLoadingStats(false);
       }
