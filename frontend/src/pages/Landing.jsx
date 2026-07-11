@@ -36,7 +36,7 @@ export default function Landing() {
           <div className="w-8 h-8 rounded-lg bg-accentBlue flex items-center justify-center text-white font-bold shadow-glow">
             <FiCpu className="w-5 h-5 animate-pulse" />
           </div>
-          <span className="text-xl font-bold tracking-tight text-white">Codedale</span>
+          <span className="text-xl font-bold tracking-tight text-white">Uprank</span>
         </div>
         <div className="flex items-center gap-4">
           <Link to="/login" className="text-sm font-medium text-textSecondary hover:text-white transition-colors">Login</Link>
@@ -56,7 +56,7 @@ export default function Landing() {
             transition={{ duration: 0.6 }}
           >
             <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight mb-6 leading-tight max-w-4xl mx-auto">
-              The Premium Gamified <br/>
+              The Premium Gamified <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-accentBlue to-indigo-400">CS Leaderboard Platform</span>
             </h1>
             <p className="text-textSecondary text-base sm:text-xl max-w-2xl mx-auto mb-10 leading-relaxed">
@@ -107,18 +107,18 @@ export default function Landing() {
 
           <GlassCard hoverEffect={false} className="p-8 border border-white/[0.08] relative overflow-hidden bg-surfaceDark/30">
             <div className="absolute inset-0 bg-gradient-to-r from-accentBlue/5 to-purple-500/5 blur-3xl pointer-events-none -z-10" />
-            
+
             {/* SVG Diagram */}
             <svg viewBox="0 0 1000 420" xmlns="http://www.w3.org/2000/svg" className="w-full h-auto text-textPrimary select-none">
               {/* Clients Box */}
               <rect x="20" y="160" width="120" height="80" rx="12" fill="#1C1C1E" stroke="rgba(255,255,255,0.08)" strokeWidth="2" />
               <text x="80" y="205" fill="#FAFAFA" fontSize="14" fontWeight="bold" textAnchor="middle">React Clients</text>
-              
+
               {/* API Gateway */}
               <rect x="220" y="140" width="120" height="120" rx="12" fill="#1C1C1E" stroke="#3B82F6" strokeWidth="2" />
               <text x="280" y="195" fill="#FAFAFA" fontSize="14" fontWeight="bold" textAnchor="middle">API Gateway</text>
               <text x="280" y="215" fill="#A1A1A6" fontSize="11" textAnchor="middle">Reverse Proxy</text>
-              
+
               {/* Write Service */}
               <rect x="420" y="50" width="120" height="90" rx="12" fill="#161616" stroke="rgba(255,255,255,0.08)" strokeWidth="2" />
               <text x="480" y="95" fill="#FAFAFA" fontSize="13" fontWeight="bold" textAnchor="middle">Write Service</text>
@@ -132,7 +132,7 @@ export default function Landing() {
               {/* Consumers */}
               <rect x="820" y="30" width="140" height="70" rx="12" fill="#1C1C1E" stroke="rgba(255,255,255,0.08)" strokeWidth="2" />
               <text x="890" y="65" fill="#FAFAFA" fontSize="12" fontWeight="bold" textAnchor="middle">Read Service (Redis)</text>
-              
+
               <rect x="820" y="160" width="140" height="70" rx="12" fill="#1C1C1E" stroke="rgba(255,255,255,0.08)" strokeWidth="2" />
               <text x="890" y="195" fill="#FAFAFA" fontSize="12" fontWeight="bold" textAnchor="middle">Analytics Service</text>
 
@@ -143,7 +143,7 @@ export default function Landing() {
               <path d="M 140 200 L 220 200" stroke="#3B82F6" strokeWidth="2" fill="none" markerEnd="url(#arrow)" />
               <path d="M 340 180 L 420 100" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" fill="none" />
               <path d="M 540 100 L 620 180" stroke="#3B82F6" strokeWidth="2" fill="none" />
-              
+
               {/* Subscription Arrows */}
               <path d="M 740 200 L 820 70" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5" fill="none" />
               <path d="M 740 200 L 820 195" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5" fill="none" />
@@ -152,7 +152,7 @@ export default function Landing() {
               {/* Gateway to Read Service (Direct path for GET ranking queries) */}
               <path d="M 280 260 L 280 370 L 800 370 L 880 100" stroke="#10B981" strokeWidth="2" strokeDasharray="3 3" fill="none" />
               <text x="430" y="360" fill="#10B981" fontSize="11">Direct Read Path (Upstash ZSET Queries)</text>
-              
+
               {/* Arrow Marker Definitions */}
               <defs>
                 <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
