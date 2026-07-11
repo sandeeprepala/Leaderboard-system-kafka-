@@ -1,5 +1,4 @@
-const db = require('../config/db');
-const { sendScoreUpdatedEvent } = require('./kafkaProducerService');
+const { pool } = require('../config/db');
 
 const VALID_REGIONS = ['asia', 'america', 'africa', 'europe', 'australia'];
 
@@ -19,158 +18,215 @@ function getTableName(base, region) {
 }
 
 /**
- * Upserts a score for a user in the leaderboard database and sends a Kafka event.
- * @param {Object} scoreData
- * @param {string} scoreData.userId
- * @param {string} scoreData.region
- * @param {number} scoreData.score
+ * Helper: inserts a PENDING event into the outbox table.
+ * Must be called within an existing transaction client.
+ */
+async function insertOutboxEvent(client, { region, userId, username, score, updatedAt }) {
+  const payload = {
+    userId,
+    username,
+    region,
+    score,
+    updatedAt
+  };
+
+  await client.query(
+    `INSERT INTO outbox (event_type, topic, payload)
+     VALUES ($1, $2, $3)`,
+    ['SCORE_UPDATED', 'score-updated', payload]
+  );
+}
+
+/**
+ * Atomically upserts a score and writes an outbox event in one transaction.
  */
 async function upsertScore({ userId, region, score }) {
-  const userTable = getTableName('users', region);
-  const leaderboardTable = getTableName('leaderboard', region);
+  const normalized = region.toLowerCase().trim();
+  const userTable = getTableName('users', normalized);
+  const leaderboardTable = getTableName('leaderboard', normalized);
 
-  // First verify user exists (safety check, since user_id references users_<region>.id)
-  const userCheck = await db.query(`SELECT id, username FROM ${userTable} WHERE id = $1`, [userId]);
-  if (userCheck.rows.length === 0) {
-    const err = new Error('User not found in specified region shard');
-    err.statusCode = 404;
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // 1. Verify user exists
+    const userCheck = await client.query(
+      `SELECT id, username FROM ${userTable} WHERE id = $1`,
+      [userId]
+    );
+    if (userCheck.rows.length === 0) {
+      const err = new Error('User not found in specified region shard');
+      err.statusCode = 404;
+      throw err;
+    }
+    const finalUsername = userCheck.rows[0].username;
+
+    // 2. Upsert score in leaderboard table
+    const result = await client.query(
+      `INSERT INTO ${leaderboardTable} (user_id, username, score, updated_at)
+       VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+       ON CONFLICT (user_id)
+       DO UPDATE SET
+         username = EXCLUDED.username,
+         score    = EXCLUDED.score,
+         updated_at = CURRENT_TIMESTAMP
+       RETURNING user_id, username, score, updated_at`,
+      [userId, finalUsername, score]
+    );
+    const record = result.rows[0];
+
+    // 3. Insert outbox event (same transaction)
+    await insertOutboxEvent(client, {
+      region: normalized,
+      userId: record.user_id,
+      username: record.username,
+      score: record.score,
+      updatedAt: record.updated_at.toISOString()
+    });
+
+    await client.query('COMMIT');
+
+    return {
+      userId: record.user_id,
+      username: record.username,
+      region: normalized,
+      score: record.score,
+      updatedAt: record.updated_at
+    };
+  } catch (err) {
+    await client.query('ROLLBACK');
     throw err;
+  } finally {
+    client.release();
   }
-
-  // Ensure denormalized username matches current state
-  const finalUsername = userCheck.rows[0].username;
-
-  const queryText = `
-    INSERT INTO ${leaderboardTable} (user_id, username, score, updated_at)
-    VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
-    ON CONFLICT (user_id)
-    DO UPDATE SET 
-      username = EXCLUDED.username,
-      score = EXCLUDED.score,
-      updated_at = CURRENT_TIMESTAMP
-    RETURNING user_id, username, score, updated_at;
-  `;
-
-  const result = await db.query(queryText, [userId, finalUsername, score]);
-  const record = result.rows[0];
-
-  // Map to Kafka event payload
-  const event = {
-    userId: record.user_id,
-    username: record.username,
-    region: region.toLowerCase().trim(),
-    score: record.score,
-    updatedAt: record.updated_at.toISOString()
-  };
-
-  // Publish to Kafka topic 'score-updated'
-  await sendScoreUpdatedEvent(event);
-
-  return {
-    userId: record.user_id,
-    username: record.username,
-    region: region.toLowerCase().trim(),
-    score: record.score,
-    updatedAt: record.updated_at
-  };
 }
 
+/**
+ * Atomically increments a score and writes an outbox event in one transaction.
+ */
 async function incrementScore({ userId, region, points }) {
-  const userTable = getTableName('users', region);
-  const leaderboardTable = getTableName('leaderboard', region);
+  const normalized = region.toLowerCase().trim();
+  const userTable = getTableName('users', normalized);
+  const leaderboardTable = getTableName('leaderboard', normalized);
 
-  // Verify user exists (safety check)
-  const userCheck = await db.query(`SELECT id, username FROM ${userTable} WHERE id = $1`, [userId]);
-  if (userCheck.rows.length === 0) {
-    const err = new Error('User not found in specified region shard');
-    err.statusCode = 404;
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // 1. Verify user exists
+    const userCheck = await client.query(
+      `SELECT id, username FROM ${userTable} WHERE id = $1`,
+      [userId]
+    );
+    if (userCheck.rows.length === 0) {
+      const err = new Error('User not found in specified region shard');
+      err.statusCode = 404;
+      throw err;
+    }
+    const finalUsername = userCheck.rows[0].username;
+
+    // 2. Increment score atomically
+    const result = await client.query(
+      `INSERT INTO ${leaderboardTable} (user_id, username, score, updated_at)
+       VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+       ON CONFLICT (user_id)
+       DO UPDATE SET
+         username   = EXCLUDED.username,
+         score      = ${leaderboardTable}.score + EXCLUDED.score,
+         updated_at = CURRENT_TIMESTAMP
+       RETURNING user_id, username, score, updated_at`,
+      [userId, finalUsername, points]
+    );
+    const record = result.rows[0];
+
+    // 3. Insert outbox event (same transaction)
+    await insertOutboxEvent(client, {
+      region: normalized,
+      userId: record.user_id,
+      username: record.username,
+      score: record.score,
+      updatedAt: record.updated_at.toISOString()
+    });
+
+    await client.query('COMMIT');
+
+    return {
+      userId: record.user_id,
+      username: record.username,
+      region: normalized,
+      score: record.score,
+      updatedAt: record.updated_at
+    };
+  } catch (err) {
+    await client.query('ROLLBACK');
     throw err;
+  } finally {
+    client.release();
   }
-
-  const finalUsername = userCheck.rows[0].username;
-
-  const queryText = `
-    INSERT INTO ${leaderboardTable} (user_id, username, score, updated_at)
-    VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
-    ON CONFLICT (user_id)
-    DO UPDATE SET 
-      username = EXCLUDED.username,
-      score = ${leaderboardTable}.score + EXCLUDED.score,
-      updated_at = CURRENT_TIMESTAMP
-    RETURNING user_id, username, score, updated_at;
-  `;
-
-  const result = await db.query(queryText, [userId, finalUsername, points]);
-  const record = result.rows[0];
-
-  // Map to Kafka event payload
-  const event = {
-    userId: record.user_id,
-    username: record.username,
-    region: region.toLowerCase().trim(),
-    score: record.score,
-    updatedAt: record.updated_at.toISOString()
-  };
-
-  // Publish to Kafka topic 'score-updated'
-  await sendScoreUpdatedEvent(event);
-
-  return {
-    userId: record.user_id,
-    username: record.username,
-    region: region.toLowerCase().trim(),
-    score: record.score,
-    updatedAt: record.updated_at
-  };
 }
 
+/**
+ * Atomically decrements a score (floor 0) and writes an outbox event in one transaction.
+ */
 async function decrementScore({ userId, region, points }) {
-  const userTable = getTableName('users', region);
-  const leaderboardTable = getTableName('leaderboard', region);
+  const normalized = region.toLowerCase().trim();
+  const userTable = getTableName('users', normalized);
+  const leaderboardTable = getTableName('leaderboard', normalized);
 
-  // Verify user exists (safety check)
-  const userCheck = await db.query(`SELECT id, username FROM ${userTable} WHERE id = $1`, [userId]);
-  if (userCheck.rows.length === 0) {
-    const err = new Error('User not found in specified region shard');
-    err.statusCode = 404;
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // 1. Verify user exists
+    const userCheck = await client.query(
+      `SELECT id, username FROM ${userTable} WHERE id = $1`,
+      [userId]
+    );
+    if (userCheck.rows.length === 0) {
+      const err = new Error('User not found in specified region shard');
+      err.statusCode = 404;
+      throw err;
+    }
+    const finalUsername = userCheck.rows[0].username;
+
+    // 2. Decrement score, clamped at 0
+    const result = await client.query(
+      `INSERT INTO ${leaderboardTable} (user_id, username, score, updated_at)
+       VALUES ($1, $2, 0, CURRENT_TIMESTAMP)
+       ON CONFLICT (user_id)
+       DO UPDATE SET
+         username   = EXCLUDED.username,
+         score      = GREATEST(0, ${leaderboardTable}.score - $3),
+         updated_at = CURRENT_TIMESTAMP
+       RETURNING user_id, username, score, updated_at`,
+      [userId, finalUsername, points]
+    );
+    const record = result.rows[0];
+
+    // 3. Insert outbox event (same transaction)
+    await insertOutboxEvent(client, {
+      region: normalized,
+      userId: record.user_id,
+      username: record.username,
+      score: record.score,
+      updatedAt: record.updated_at.toISOString()
+    });
+
+    await client.query('COMMIT');
+
+    return {
+      userId: record.user_id,
+      username: record.username,
+      region: normalized,
+      score: record.score,
+      updatedAt: record.updated_at
+    };
+  } catch (err) {
+    await client.query('ROLLBACK');
     throw err;
+  } finally {
+    client.release();
   }
-
-  const finalUsername = userCheck.rows[0].username;
-
-  const queryText = `
-    INSERT INTO ${leaderboardTable} (user_id, username, score, updated_at)
-    VALUES ($1, $2, 0, CURRENT_TIMESTAMP)
-    ON CONFLICT (user_id)
-    DO UPDATE SET 
-      username = EXCLUDED.username,
-      score = GREATEST(0, ${leaderboardTable}.score - $3),
-      updated_at = CURRENT_TIMESTAMP
-    RETURNING user_id, username, score, updated_at;
-  `;
-
-  const result = await db.query(queryText, [userId, finalUsername, points]);
-  const record = result.rows[0];
-
-  // Map to Kafka event payload
-  const event = {
-    userId: record.user_id,
-    username: record.username,
-    region: region.toLowerCase().trim(),
-    score: record.score,
-    updatedAt: record.updated_at.toISOString()
-  };
-
-  // Publish to Kafka topic 'score-updated'
-  await sendScoreUpdatedEvent(event);
-
-  return {
-    userId: record.user_id,
-    username: record.username,
-    region: region.toLowerCase().trim(),
-    score: record.score,
-    updatedAt: record.updated_at
-  };
 }
 
 module.exports = {

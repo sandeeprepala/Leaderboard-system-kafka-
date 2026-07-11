@@ -44,12 +44,8 @@ services:
       PORT: 8001
       NODE_ENV: production
       DATABASE_URL: postgresql://postgres.bahlyzkbzlakwkumnprf:Ammaayya%40123@aws-0-ap-southeast-2.pooler.supabase.com:5432/postgres
-      KAFKA_BROKERS: kafka:29092
-      KAFKA_CLIENT_ID: write-service
       JWT_SECRET: secretkey
       JWT_EXPIRES_IN: 24h
-    depends_on:
-      - kafka
     restart: unless-stopped
 
   read-service:
@@ -103,6 +99,22 @@ services:
     environment:
       KAFKA_BROKERS: kafka:29092
       KAFKA_CLIENT_ID: notification-service
+    depends_on:
+      - kafka
+    restart: unless-stopped
+
+  outbox-publisher-service:
+    build:
+      context: ./backend/outbox-publisher-service
+      dockerfile: Dockerfile
+    container_name: outbox-publisher-service
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://postgres.bahlyzkbzlakwkumnprf:Ammaayya%40123@aws-0-ap-southeast-2.pooler.supabase.com:5432/postgres
+      KAFKA_BROKERS: kafka:29092
+      KAFKA_CLIENT_ID: outbox-publisher
+      POLL_INTERVAL_MS: 1000
+      BATCH_SIZE: 100
     depends_on:
       - kafka
     restart: unless-stopped

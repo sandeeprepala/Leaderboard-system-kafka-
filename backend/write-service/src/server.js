@@ -5,7 +5,6 @@ require('dotenv').config();
 
 const authRoutes = require('./routes/authRoutes');
 const scoreRoutes = require('./routes/scoreRoutes');
-const { connectProducer, disconnectProducer } = require('./services/kafkaProducerService');
 const db = require('./config/db');
 
 const cookieParser = require('cookie-parser');
@@ -33,17 +32,11 @@ app.use((err, req, res, next) => {
   console.error('[Error Handler]', err);
   const status = err.statusCode || 500;
   const message = err.message || 'Internal Server Error';
-  res.status(status).json({
-    success: false,
-    message
-  });
+  res.status(status).json({ success: false, message });
 });
 
 // Start service
 async function startServer() {
-  // Connect to Kafka first
-  await connectProducer();
-
   const server = app.listen(PORT, () => {
     console.log(`Write Service running on port ${PORT}`);
   });
@@ -52,7 +45,6 @@ async function startServer() {
   const shutdown = async () => {
     console.log('Shutting down Write Service gracefully...');
     server.close(async () => {
-      await disconnectProducer();
       await db.pool.end();
       console.log('Write Service shutdown complete.');
       process.exit(0);
