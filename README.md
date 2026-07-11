@@ -1,4 +1,4 @@
-# Codedale — Gamified CS Leaderboard System (Transactional Outbox & Kafka Edition)
+# Uprank — Gamified CS Leaderboard System (Transactional Outbox & Kafka Edition)
 
 > A production-grade, event-driven microservices platform that lets students compete in Computer Science quizzes and tracks their scores across a globally sharded, real-time leaderboard. Built using the **Transactional Outbox Pattern**, Apache Kafka, PostgreSQL sharding, Upstash Redis Sorted Sets, and a React + Vite glassmorphism frontend.
 
