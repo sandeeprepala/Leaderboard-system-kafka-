@@ -1,6 +1,6 @@
+require('dotenv').config();
 const { Pool } = require('pg');
 const { Kafka } = require('kafkajs');
-require('dotenv').config();
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 const POLL_INTERVAL_MS = parseInt(process.env.POLL_INTERVAL_MS) || 1000;
