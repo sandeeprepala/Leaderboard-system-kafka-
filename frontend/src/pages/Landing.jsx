@@ -1,8 +1,7 @@
-import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import GlassCard from '../components/GlassCard';
-import { FiCheck, FiCpu, FiTrendingUp, FiZap, FiDatabase, FiShuffle } from 'react-icons/fi';
+import { FiCpu, FiZap, FiDatabase, FiShuffle } from 'react-icons/fi';
 
 export default function Landing() {
   const features = [
@@ -182,7 +181,7 @@ export default function Landing() {
       <footer className="glass border-t border-borderLight px-6 py-8">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-textSecondary">
           <div>
-            <span className="font-bold text-white">Codedale</span> © 2026. All rights reserved.
+            <span className="font-bold text-white">Uprank</span> © 2026. All rights reserved.
           </div>
           <div className="flex gap-6">
             <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>

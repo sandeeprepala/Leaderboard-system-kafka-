@@ -27,6 +27,8 @@ jobs:
 
           key: ${{ secrets.EC2_SSH_KEY }}
 
+          command_timeout: 30m
+
           script: |
 
             cd ~/Leaderboard-system-kafka-
