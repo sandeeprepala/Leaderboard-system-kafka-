@@ -36,3 +36,15 @@ jobs:
             git pull origin main
 
             docker compose up -d --build
+
+            echo "=== Docker Container Status ==="
+
+            docker compose ps
+
+            echo "=== Read Service Logs ==="
+
+            docker compose logs --tail=100 read-service
+
+            echo "=== Kafka Logs ==="
+
+            docker compose logs --tail=100 kafka
